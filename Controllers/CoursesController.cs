@@ -131,7 +131,7 @@ namespace APIPROYECT.Controllers
         [HttpPost("modules/{moduleId}/lessons")]
         public IActionResult AddLesson(Guid moduleId, [FromBody] LessonCreateDto dto)
         {
-            var module = _context.Modules.Include(m => m.Lessons).Include(m => m.Course).FirstOrDefault(m => m.Id == moduleId);
+            var module = _context.Modules.Include(m => m.Lessons).FirstOrDefault(m => m.Id == moduleId);
             if (module == null) return NotFound();
             var course = _context.Courses.FirstOrDefault(c => c.Modules.Any(m => m.Id == moduleId));
             if (course == null) return NotFound();
