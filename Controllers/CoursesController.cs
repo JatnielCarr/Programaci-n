@@ -2,11 +2,13 @@ using Microsoft.AspNetCore.Mvc;
 using Core.Domain;
 using Core.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
 
 namespace APIPROYECT.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    [Authorize]
     public class CoursesController : ControllerBase
     {
         private readonly AppDbContext _context;
