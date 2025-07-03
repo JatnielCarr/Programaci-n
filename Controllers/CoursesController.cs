@@ -308,7 +308,6 @@ namespace APIPROYECT.Controllers
                     _context.SaveChanges();
                 }
                 try { course.AddInstructor(instructorExistente); } catch (Exception ex) { return BadRequest(new { message = ex.Message }); }
-                _context.CourseInstructors.Add(new Core.Domain.CourseInstructor { CourseId = course.Id, InstructorId = instructorExistente.Id, Instructor = instructorExistente });
                 _context.SaveChanges();
                 return Ok(instructorExistente);
             }
