@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Core.Domain;
 using Core.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace APIPROYECT.Controllers
 {
@@ -81,8 +82,9 @@ namespace APIPROYECT.Controllers
         [HttpPost("{courseId}/modules")]
         public IActionResult AddModule(Guid courseId, [FromBody] ModuleCreateDto dto)
         {
-            var course = _context.Courses.FirstOrDefault(c => c.Id == courseId);
+            var course = _context.Courses.Include(c => c.Modules).FirstOrDefault(c => c.Id == courseId);
             if (course == null) return NotFound();
+            if (course.IsPublished) return BadRequest("No se pueden modificar cursos publicados.");
             var module = new Module(dto.Title);
             try { course.AddModule(module); } catch (Exception ex) { return BadRequest(ex.Message); }
             _context.Modules.Add(module);
@@ -94,28 +96,30 @@ namespace APIPROYECT.Controllers
         [HttpGet("{courseId}/modules")]
         public IActionResult GetModules(Guid courseId)
         {
-            var course = _context.Courses.FirstOrDefault(c => c.Id == courseId);
+            var course = _context.Courses.Include(c => c.Modules).FirstOrDefault(c => c.Id == courseId);
             if (course == null) return NotFound();
             return Ok(course.Modules);
         }
 
         // PUT: api/modules/{moduleId}
-        [HttpPut("/api/modules/{moduleId}")]
+        [HttpPut("modules/{moduleId}")]
         public IActionResult UpdateModule(Guid moduleId, [FromBody] ModuleUpdateDto dto)
         {
-            var course = _context.Courses.FirstOrDefault(c => c.Modules.Any(m => m.Id == moduleId));
+            var course = _context.Courses.Include(c => c.Modules).FirstOrDefault(c => c.Modules.Any(m => m.Id == moduleId));
             if (course == null) return NotFound();
+            if (course.IsPublished) return BadRequest("No se pueden modificar cursos publicados.");
             try { course.UpdateModule(moduleId, dto.Title); } catch (Exception ex) { return BadRequest(ex.Message); }
             _context.SaveChanges();
             return Ok();
         }
 
         // DELETE: api/modules/{moduleId}
-        [HttpDelete("/api/modules/{moduleId}")]
+        [HttpDelete("modules/{moduleId}")]
         public IActionResult DeleteModule(Guid moduleId)
         {
-            var course = _context.Courses.FirstOrDefault(c => c.Modules.Any(m => m.Id == moduleId));
+            var course = _context.Courses.Include(c => c.Modules).FirstOrDefault(c => c.Modules.Any(m => m.Id == moduleId));
             if (course == null) return NotFound();
+            if (course.IsPublished) return BadRequest("No se pueden modificar cursos publicados.");
             try { course.RemoveModule(moduleId); } catch (Exception ex) { return BadRequest(ex.Message); }
             var module = _context.Modules.FirstOrDefault(m => m.Id == moduleId);
             if (module != null) _context.Modules.Remove(module);
@@ -124,49 +128,60 @@ namespace APIPROYECT.Controllers
         }
 
         // POST: api/modules/{moduleId}/lessons
-        [HttpPost("/api/modules/{moduleId}/lessons")]
+        [HttpPost("modules/{moduleId}/lessons")]
         public IActionResult AddLesson(Guid moduleId, [FromBody] LessonCreateDto dto)
         {
+            var module = _context.Modules.Include(m => m.Lessons).Include(m => m.Course).FirstOrDefault(m => m.Id == moduleId);
+            if (module == null) return NotFound();
             var course = _context.Courses.FirstOrDefault(c => c.Modules.Any(m => m.Id == moduleId));
             if (course == null) return NotFound();
+            if (course.IsPublished) return BadRequest("No se pueden modificar cursos publicados.");
             var lesson = new Lesson(dto.Title, dto.Content);
-            try { course.AddLessonToModule(moduleId, lesson); } catch (Exception ex) { return BadRequest(ex.Message); }
+            try { module.AddLesson(lesson); } catch (Exception ex) { return BadRequest(ex.Message); }
             _context.Lessons.Add(lesson);
             _context.SaveChanges();
             return Ok(lesson);
         }
 
         // GET: api/modules/{moduleId}/lessons
-        [HttpGet("/api/modules/{moduleId}/lessons")]
+        [HttpGet("modules/{moduleId}/lessons")]
         public IActionResult GetLessons(Guid moduleId)
         {
-            var module = _context.Modules.FirstOrDefault(m => m.Id == moduleId);
+            var module = _context.Modules.Include(m => m.Lessons).FirstOrDefault(m => m.Id == moduleId);
             if (module == null) return NotFound();
             return Ok(module.Lessons);
         }
 
         // PUT: api/lessons/{lessonId}
-        [HttpPut("/api/lessons/{lessonId}")]
+        [HttpPut("lessons/{lessonId}")]
         public IActionResult UpdateLesson(Guid lessonId, [FromBody] LessonUpdateDto dto)
         {
-            var course = _context.Courses.FirstOrDefault(c => c.Modules.Any(m => m.Lessons.Any(l => l.Id == lessonId)));
+            var module = _context.Modules.Include(m => m.Lessons).FirstOrDefault(m => m.Lessons.Any(l => l.Id == lessonId));
+            if (module == null) return NotFound();
+            var course = _context.Courses.FirstOrDefault(c => c.Modules.Any(m => m.Id == module.Id));
             if (course == null) return NotFound();
-            var module = course.Modules.FirstOrDefault(m => m.Lessons.Any(l => l.Id == lessonId));
-            try { course.UpdateLesson(module.Id, lessonId, dto.Title, dto.Content); } catch (Exception ex) { return BadRequest(ex.Message); }
+            if (course.IsPublished) return BadRequest("No se pueden modificar cursos publicados.");
+            var lesson = module.Lessons.FirstOrDefault(l => l.Id == lessonId);
+            if (lesson == null) return NotFound();
+            lesson.SetTitle(dto.Title);
+            lesson.SetContent(dto.Content);
             _context.SaveChanges();
             return Ok();
         }
 
         // DELETE: api/lessons/{lessonId}
-        [HttpDelete("/api/lessons/{lessonId}")]
+        [HttpDelete("lessons/{lessonId}")]
         public IActionResult DeleteLesson(Guid lessonId)
         {
-            var course = _context.Courses.FirstOrDefault(c => c.Modules.Any(m => m.Lessons.Any(l => l.Id == lessonId)));
+            var module = _context.Modules.Include(m => m.Lessons).FirstOrDefault(m => m.Lessons.Any(l => l.Id == lessonId));
+            if (module == null) return NotFound();
+            var course = _context.Courses.FirstOrDefault(c => c.Modules.Any(m => m.Id == module.Id));
             if (course == null) return NotFound();
-            var module = course.Modules.FirstOrDefault(m => m.Lessons.Any(l => l.Id == lessonId));
-            try { course.RemoveLesson(module.Id, lessonId); } catch (Exception ex) { return BadRequest(ex.Message); }
-            var lesson = _context.Lessons.FirstOrDefault(l => l.Id == lessonId);
-            if (lesson != null) _context.Lessons.Remove(lesson);
+            if (course.IsPublished) return BadRequest("No se pueden modificar cursos publicados.");
+            var lesson = module.Lessons.FirstOrDefault(l => l.Id == lessonId);
+            if (lesson == null) return NotFound();
+            module.RemoveLesson(lessonId);
+            _context.Lessons.Remove(lesson);
             _context.SaveChanges();
             return NoContent();
         }
@@ -175,8 +190,9 @@ namespace APIPROYECT.Controllers
         [HttpPost("{courseId}/instructors")]
         public IActionResult AddInstructor(Guid courseId, [FromBody] InstructorCreateDto dto)
         {
-            var course = _context.Courses.FirstOrDefault(c => c.Id == courseId);
+            var course = _context.Courses.Include(c => c.CourseInstructors).ThenInclude(ci => ci.Instructor).FirstOrDefault(c => c.Id == courseId);
             if (course == null) return NotFound();
+            if (course.IsPublished) return BadRequest("No se pueden modificar cursos publicados.");
             var instructor = _context.Instructors.FirstOrDefault(i => i.Name == dto.Name);
             if (instructor == null)
             {
@@ -184,6 +200,8 @@ namespace APIPROYECT.Controllers
                 _context.Instructors.Add(instructor);
                 _context.SaveChanges();
             }
+            if (course.CourseInstructors.Any(ci => ci.Instructor.Name == dto.Name))
+                return BadRequest("No se pueden agregar instructores con nombre repetido.");
             try { course.AddInstructor(instructor); } catch (Exception ex) { return BadRequest(ex.Message); }
             _context.CourseInstructors.Add(new Core.Domain.CourseInstructor { CourseId = course.Id, InstructorId = instructor.Id, Instructor = instructor });
             _context.SaveChanges();
@@ -194,8 +212,9 @@ namespace APIPROYECT.Controllers
         [HttpDelete("{courseId}/instructors/{instructorId}")]
         public IActionResult DeleteInstructor(Guid courseId, Guid instructorId)
         {
-            var course = _context.Courses.FirstOrDefault(c => c.Id == courseId);
+            var course = _context.Courses.Include(c => c.CourseInstructors).FirstOrDefault(c => c.Id == courseId);
             if (course == null) return NotFound();
+            if (course.IsPublished) return BadRequest("No se pueden modificar cursos publicados.");
             try { course.RemoveInstructor(instructorId); } catch (Exception ex) { return BadRequest(ex.Message); }
             var ci = _context.CourseInstructors.FirstOrDefault(x => x.CourseId == courseId && x.InstructorId == instructorId);
             if (ci != null) _context.CourseInstructors.Remove(ci);

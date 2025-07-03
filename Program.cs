@@ -94,4 +94,10 @@ app.Use(async (context, next) =>
 
 app.MapControllers();
 
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<Core.Infrastructure.Data.AppDbContext>();
+    Core.Infrastructure.Data.DataSeeder.Seed(db);
+}
+
 app.Run();
