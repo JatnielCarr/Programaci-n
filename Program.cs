@@ -69,14 +69,6 @@ builder.Services.AddSwaggerGen(c =>
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-app.UseSwagger();
-app.UseSwaggerUI();
-
-app.UseHttpsRedirection();
-
-app.UseAuthentication();
-app.UseAuthorization();
-
 app.Use(async (context, next) =>
 {
     var allowedIps = new[] { "187.155.101.200", "::ffff:100.64.0.2" };
@@ -102,6 +94,12 @@ app.Use(async (context, next) =>
         await context.Response.WriteAsync("Acceso solo permitido desde la IP autorizada.");
     }
 });
+
+app.UseSwagger();
+app.UseSwaggerUI();
+app.UseHttpsRedirection();
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapControllers();
 
