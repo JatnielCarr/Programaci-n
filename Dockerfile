@@ -1,16 +1,12 @@
-# Build stage
+# Etapa de build
 FROM mcr.microsoft.com/dotnet/sdk:6.0 AS build
 WORKDIR /src
-
-COPY APIPROYECT/*.csproj ./APIPROYECT/
-RUN dotnet restore APIPROYECT/APIPROYECT.csproj
-
+COPY *.csproj ./
+RUN dotnet restore ./APIPROYECT.csproj
 COPY . .
-
-WORKDIR /src/APIPROYECT
 RUN dotnet publish -c Release -o /app
 
-# Runtime stage
+# Etapa de runtime
 FROM mcr.microsoft.com/dotnet/aspnet:6.0
 WORKDIR /app
 COPY --from=build /app .
