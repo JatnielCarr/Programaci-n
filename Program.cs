@@ -80,9 +80,9 @@ app.UseAuthorization();
 app.Use(async (context, next) =>
 {
     var remoteIp = context.Connection.RemoteIpAddress;
-    var allowedIp = "187.155.101.200"; // Tu IP pública
-    Console.WriteLine($"Request desde IP: {remoteIp}"); // Log para ver la IP real
-    if (remoteIp != null && remoteIp.ToString() == allowedIp)
+    var allowedPrefix = "187.155.101."; // Prefijo de tu subred pública
+    Console.WriteLine($"Request desde IP: {remoteIp}");
+    if (remoteIp != null && remoteIp.ToString().StartsWith(allowedPrefix))
     {
         await next.Invoke();
     }
