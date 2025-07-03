@@ -3,6 +3,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using Microsoft.AspNetCore.Authorization;
 
 namespace APIPROYECT.Controllers
 {
@@ -18,6 +19,7 @@ namespace APIPROYECT.Controllers
         }
 
         [HttpPost("login")]
+        [AllowAnonymous]
         public IActionResult Login([FromBody] LoginRequest request)
         {
             // Solo permite el usuario admin
