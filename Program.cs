@@ -77,6 +77,21 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.Use(async (context, next) =>
+{
+    var remoteIp = context.Connection.RemoteIpAddress;
+    var allowedIp = "187.155.101.200";
+    if (remoteIp != null && remoteIp.ToString() == allowedIp)
+    {
+        await next.Invoke();
+    }
+    else
+    {
+        context.Response.StatusCode = 403; // Forbidden
+        await context.Response.WriteAsync("Acceso solo permitido desde la IP autorizada.");
+    }
+});
+
 app.MapControllers();
 
 app.Run();
