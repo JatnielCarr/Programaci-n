@@ -79,16 +79,26 @@ app.UseAuthorization();
 
 app.Use(async (context, next) =>
 {
-    var remoteIp = context.Connection.RemoteIpAddress;
-    var allowedPrefix = "187.155.101."; // Prefijo de tu subred pública
+    var allowedIps = new[] { "187.155.101.200", "::ffff:100.64.0.2" };
+    var remoteIp = context.Connection.RemoteIpAddress?.ToString();
+
+    // Intenta obtener la IP real desde el header X-Forwarded-For
+    if (context.Request.Headers.ContainsKey("X-Forwarded-For"))
+    {
+        var forwarded = context.Request.Headers["X-Forwarded-For"].FirstOrDefault()?.Split(',').FirstOrDefault()?.Trim();
+        if (!string.IsNullOrEmpty(forwarded))
+            remoteIp = forwarded;
+    }
+
     Console.WriteLine($"Request desde IP: {remoteIp}");
-    if (remoteIp != null && remoteIp.ToString().StartsWith(allowedPrefix))
+
+    if (allowedIps.Contains(remoteIp))
     {
         await next.Invoke();
     }
     else
     {
-        context.Response.StatusCode = 403; // Forbidden
+        context.Response.StatusCode = 403;
         await context.Response.WriteAsync("Acceso solo permitido desde la IP autorizada.");
     }
 });
