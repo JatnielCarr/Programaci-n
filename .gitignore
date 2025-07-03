@@ -1,0 +1,36 @@
+# Archivos y carpetas de compilación
+bin/
+obj/
+
+# Archivos de usuario y configuración local
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vs/
+
+# Secretos y configuraciones locales
+secrets.json
+appsettings.Development.json
+
+# Archivos de logs
+*.log
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+
+# Archivos de publicación
+publish/
+
+# Archivos de paquetes
+*.nupkg
+
+# Archivos de lock y cache
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# Archivos de Rider y VSCode
+.idea/
+.vscode/ 
