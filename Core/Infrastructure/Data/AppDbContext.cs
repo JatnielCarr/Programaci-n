@@ -46,6 +46,12 @@ namespace Core.Infrastructure.Data
                 .WithOne()
                 .OnDelete(DeleteBehavior.Cascade);
 
+            modelBuilder.Entity<Module>()
+                .HasOne(m => m.Instructor)
+                .WithMany()
+                .HasForeignKey(m => m.InstructorId)
+                .OnDelete(DeleteBehavior.Restrict);
+
             // Instructor: Name unique per course (handled in logic)
         }
     }

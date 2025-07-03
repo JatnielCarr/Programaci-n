@@ -105,8 +105,10 @@ namespace APIPROYECT.Controllers
         [HttpPost("{courseId}/publish")]
         public IActionResult PublishCourse(Guid courseId)
         {
-            var course = _context.Courses.FirstOrDefault(c => c.Id == courseId);
+            var course = _context.Courses.Include(c => c.CourseInstructors).FirstOrDefault(c => c.Id == courseId);
             if (course == null) return NotFound();
+            if (course.CourseInstructors == null || !course.CourseInstructors.Any())
+                return BadRequest(new { message = "No se puede publicar un curso sin instructores asignados." });
             course.Publish();
             _context.SaveChanges();
             return Ok(course);
@@ -293,19 +295,22 @@ namespace APIPROYECT.Controllers
                 var course = _context.Courses.Include(c => c.CourseInstructors).ThenInclude(ci => ci.Instructor).FirstOrDefault(c => c.Id == courseId);
                 if (course == null) return NotFound(new { message = "Curso no encontrado" });
                 if (course.IsPublished) return BadRequest(new { message = "No se pueden modificar cursos publicados." });
-                var instructor = _context.Instructors.FirstOrDefault(i => i.Name == dto.Name);
-                if (instructor == null)
+                var instructorExistente = _context.Instructors.FirstOrDefault(i => i.Name == dto.Name);
+                if (instructorExistente != null)
                 {
-                    instructor = new Instructor(dto.Name);
-                    _context.Instructors.Add(instructor);
+                    if (course.CourseInstructors.Any(ci => ci.Instructor.Name == dto.Name))
+                        return BadRequest(new { message = "No se pueden agregar instructores con nombre repetido." });
+                }
+                else
+                {
+                    instructorExistente = new Instructor(dto.Name);
+                    _context.Instructors.Add(instructorExistente);
                     _context.SaveChanges();
                 }
-                if (course.CourseInstructors.Any(ci => ci.Instructor.Name == dto.Name))
-                    return BadRequest(new { message = "No se pueden agregar instructores con nombre repetido." });
-                try { course.AddInstructor(instructor); } catch (Exception ex) { return BadRequest(new { message = ex.Message }); }
-                _context.CourseInstructors.Add(new Core.Domain.CourseInstructor { CourseId = course.Id, InstructorId = instructor.Id, Instructor = instructor });
+                try { course.AddInstructor(instructorExistente); } catch (Exception ex) { return BadRequest(new { message = ex.Message }); }
+                _context.CourseInstructors.Add(new Core.Domain.CourseInstructor { CourseId = course.Id, InstructorId = instructorExistente.Id, Instructor = instructorExistente });
                 _context.SaveChanges();
-                return Ok(instructor);
+                return Ok(instructorExistente);
             }
             catch (Exception ex)
             {
@@ -333,6 +338,59 @@ namespace APIPROYECT.Controllers
             {
                 Console.WriteLine($"Error en DeleteInstructor: {ex.Message}");
                 return StatusCode(500, new { message = "Error interno del servidor" });
+            }
+        }
+
+        [HttpPost("modules/{moduleId}/assign-instructor")]
+        public IActionResult AssignInstructorToModule(Guid moduleId, [FromBody] InstructorCreateDto dto)
+        {
+            try
+            {
+                var module = _context.Modules.Include(m => m.Instructor).FirstOrDefault(m => m.Id == moduleId);
+                if (module == null) return NotFound(new { message = "Módulo no encontrado" });
+                var instructor = _context.Instructors.FirstOrDefault(i => i.Name == dto.Name);
+                if (instructor == null) return NotFound(new { message = "Instructor no encontrado" });
+                module.AssignInstructor(instructor);
+                _context.SaveChanges();
+                return Ok(module);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpPost("modules/{moduleId}/remove-instructor")]
+        public IActionResult RemoveInstructorFromModule(Guid moduleId)
+        {
+            try
+            {
+                var module = _context.Modules.Include(m => m.Instructor).FirstOrDefault(m => m.Id == moduleId);
+                if (module == null) return NotFound(new { message = "Módulo no encontrado" });
+                module.RemoveInstructor();
+                _context.SaveChanges();
+                return Ok(module);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+
+        [HttpPost("modules/{moduleId}/publish")]
+        public IActionResult PublishModule(Guid moduleId)
+        {
+            try
+            {
+                var module = _context.Modules.Include(m => m.Instructor).FirstOrDefault(m => m.Id == moduleId);
+                if (module == null) return NotFound(new { message = "Módulo no encontrado" });
+                module.Publish();
+                _context.SaveChanges();
+                return Ok(module);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
             }
         }
     }
